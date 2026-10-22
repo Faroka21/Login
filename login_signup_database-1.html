@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ورود و ثبت‌نام</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Tahoma, Arial, sans-serif;
+      background: #f2f4f8;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      color: #263238;
+    }
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      padding: 26px;
+      border-radius: 14px;
+      box-shadow: 0 8px 28px #00000012;
+    }
+    h1 { text-align: center; font-size: 23px; margin: 0 0 20px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .tab {
+      flex: 1; margin: 0; padding: 11px; border: 1px solid #d5dbe5;
+      background: #f7f8fb; color: #344054; border-radius: 8px; cursor: pointer;
+      font-family: inherit;
+    }
+    .tab.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    label { display: block; margin: 13px 0 6px; font-size: 14px; }
+    input {
+      width: 100%; padding: 11px; border: 1px solid #ccd2da; border-radius: 7px;
+      font-family: inherit; font-size: 14px;
+    }
+    input:focus { outline: 2px solid #bfdbfe; border-color: #2563eb; }
+    .submit {
+      width: 100%; margin-top: 20px; padding: 12px; background: #2563eb;
+      color: white; border: 0; border-radius: 7px; font-family: inherit;
+      font-size: 15px; cursor: pointer;
+    }
+    .submit:hover { background: #1d4ed8; }
+    #message { text-align: center; font-size: 14px; line-height: 1.8; }
+    .hidden { display: none; }
+    .database {
+      margin-top: 26px; padding-top: 18px; border-top: 1px solid #e5e7eb;
+    }
+    .database h2 { font-size: 17px; margin: 0 0 8px; }
+    .small { color: #667085; font-size: 12px; line-height: 1.8; }
+    .users { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+    .users th, .users td { border: 1px solid #e5e7eb; padding: 8px 6px; text-align: right; overflow-wrap: anywhere; }
+    .users th { background: #f8fafc; }
+    .logout { background: #475467; margin-top: 10px; }
+    .logout:hover { background: #344054; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>حساب کاربری</h1>
+
+    <div class="tabs">
+      <button type="button" class="tab active" id="signupTab">ثبت‌نام</button>
+      <button type="button" class="tab" id="loginTab">ورود</button>
+    </div>
+
+    <form id="signupForm">
+      <label for="name">نام</label>
+      <input type="text" id="name" placeholder="نام خود را وارد کنید" required minlength="2">
+
+      <label for="signupEmail">ایمیل</label>
+      <input type="email" id="signupEmail" placeholder="example@email.com" required>
+
+      <label for="signupPassword">رمز عبور</label>
+      <input type="password" id="signupPassword" placeholder="حداقل ۶ کاراکتر" required minlength="6">
+
+      <button class="submit" type="submit">ساخت حساب</button>
+    </form>
+
+    <form id="loginForm" class="hidden">
+      <label for="loginEmail">ایمیل</label>
+      <input type="email" id="loginEmail" placeholder="ایمیل ثبت‌شده" required>
+
+      <label for="loginPassword">رمز عبور</label>
+      <input type="password" id="loginPassword" placeholder="رمز عبور خود را وارد کنید" required>
+
+      <button class="submit" type="submit">ورود به حساب</button>
+    </form>
+
+    <p id="message" role="status" aria-live="polite"></p>
+
+    <section id="welcome" class="hidden">
+      <h2 id="welcomeTitle"></h2>
+      <p>با موفقیت وارد حساب کاربری شدی.</p>
+      <button class="submit logout" id="logoutButton" type="button">خروج از حساب</button>
+    </section>
+
+    <section class="database">
+      <h2>پایگاه داده آزمایشی کاربران</h2>
+      <p class="small">این جدول، حساب‌های ذخیره‌شده در حافظه مرورگر همین دستگاه را نمایش می‌دهد.</p>
+      <div id="databaseContent"></div>
+    </section>
+  </main>
+
+  <script>
+    const signupForm = document.getElementById("signupForm");
+    const loginForm = document.getElementById("loginForm");
+    const signupTab = document.getElementById("signupTab");
+    const loginTab = document.getElementById("loginTab");
+    const message = document.getElementById("message");
+    const welcome = document.getElementById("welcome");
+    const databaseContent = document.getElementById("databaseContent");
+
+    // دیتابیس ساده و آزمایشی: آرایه‌ای از کاربران در localStorage
+    const USERS_KEY = "demoUsers";
+
+    function getUsers() {
+      try {
+        return JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveUsers(users) {
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    }
+
+    function showMessage(text, success = false) {
+      message.textContent = text;
+      message.style.color = success ? "#15803d" : "#b42318";
+    }
+
+    function showTab(tab) {
+      const isSignup = tab === "signup";
+      signupForm.classList.toggle("hidden", !isSignup);
+      loginForm.classList.toggle("hidden", isSignup);
+      signupTab.classList.toggle("active", isSignup);
+      loginTab.classList.toggle("active", !isSignup);
+      welcome.classList.add("hidden");
+      showMessage("");
+    }
+
+    function renderDatabase() {
+      const users = getUsers();
+      if (users.length === 0) {
+        databaseContent.innerHTML = '<p class="small">هنوز کاربری ثبت‌نام نکرده است.</p>';
+        return;
+      }
+
+      const table = document.createElement("table");
+      table.className = "users";
+      const thead = document.createElement("thead");
+      thead.innerHTML = "<tr><th>ردیف</th><th>نام</th><th>ایمیل</th></tr>";
+      table.appendChild(thead);
+      const tbody = document.createElement("tbody");
+
+      users.forEach((user, index) => {
+        const row = document.createElement("tr");
+        [String(index + 1), user.name, user.email].forEach(value => {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          row.appendChild(cell);
+        });
+        tbody.appendChild(row);
+      });
+
+      table.appendChild(tbody);
+      databaseContent.replaceChildren(table);
+    }
+
+    signupTab.addEventListener("click", () => showTab("signup"));
+    loginTab.addEventListener("click", () => showTab("login"));
+
+    signupForm.addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("signupEmail").value.trim().toLowerCase();
+      const password = document.getElementById("signupPassword").value;
+      const users = getUsers();
+
+      if (users.some(user => user.email === email)) {
+        showMessage("با این ایمیل قبلاً ثبت‌نام شده است.");
+        return;
+      }
+
+      users.push({ name, email, password });
+      saveUsers(users);
+      signupForm.reset();
+      renderDatabase();
+      showMessage("ثبت‌نام با موفقیت انجام شد. حالا می‌توانی وارد شوی.", true);
+      showTab("login");
+      document.getElementById("loginEmail").value = email;
+    });
+
+    loginForm.addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+      const password = document.getElementById("loginPassword").value;
+      const user = getUsers().find(item => item.email === email && item.password === password);
+
+      if (!user) {
+        showMessage("ایمیل یا رمز عبور اشتباه است.");
+        return;
+      }
+
+      signupForm.classList.add("hidden");
+      loginForm.classList.add("hidden");
+      signupTab.classList.add("hidden");
+      loginTab.classList.add("hidden");
+      welcome.classList.remove("hidden");
+      document.getElementById("welcomeTitle").textContent = "سلام " + user.name + "!";
+      showMessage("");
+    });
+
+    document.getElementById("logoutButton").addEventListener("click", function() {
+      welcome.classList.add("hidden");
+      signupTab.classList.remove("hidden");
+      loginTab.classList.remove("hidden");
+      showTab("login");
+      loginForm.reset();
+    });
+
+    renderDatabase();
+  </script>
+</body>
+</html>
